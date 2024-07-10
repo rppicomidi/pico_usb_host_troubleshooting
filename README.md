@@ -241,7 +241,7 @@ the data requested or some handshake that says it is not ready or cannot provide
 Sometimes finding issues requires you to look at the USB data the host is reading from
 the device or that the host is sending to the device.
 
-## USB packet sniffers
+### USB packet sniffers
 A USB packet sniffer is a passive device that captures the USB packets that are passed
 between the host and device. It has some means to store or display the captured packets, either
 in real-time or after some other limit such as number of packets captured, elapsed
@@ -256,7 +256,7 @@ host and your device.
 
 Commercial embedded USB packet sniffers are very good, but most cost about $500 US or more.
 A less costly solution is to use hardware/software logic analyzers to capture the USB packets,
-but the good ones are still in the $100 US neighborhood. This cost is hard to justify for
+but the good ones are still over $100 US. This cost is hard to justify for
 a tool that you probably won't use very often.
 
 Thanks to the Raspberry Pi Pico or other similar RP2040 boards and the great work from the open
@@ -265,6 +265,52 @@ have to be a dedicated tool. My packet sniffer is just my USB breakout board, 3 
 wires, and a Raspberry Pi Pico. When I do not need the packet sniffer, I can use all the
 pieces for something else. Here is a photo of my packet sniffer hardware:
 ![usb-packet-sniffer](https://github.com/rppicomidi/pico_usb_host_troubleshooting/assets/94197396/aa77cb6c-54bd-4c75-ab03-2c05a797ecdc)
+The harware pieces cost me well under $20 US, and I use them for projects other than
+USB packet sniffing.
 
+Other solutions include hacking into an old cable and soldering it to a connector, or
+wiring discrete USB breakout boards to a Pico board on a standard solderless breadboard.
+See the `README.md` files from the two software projects that follow for hardware photos.
+
+### usb-sniffer-lite
+The [usb-sniffer-lite](https://github.com/ataradov/usb-sniffer-lite) project is the
+simpler of the two software solutions that I found that use a Pico board. It is
+totally self-contained. You do not even have to install the `pico-sdk` to build
+it. It only relies on the GNU gcc toolchain. There is also a pre-built .uf2 file
+if you don't want to build it yourself. The firmware that runs on the Pico board
+has a serial port console UI. The documentation in the project's [README.md](https://github.com/ataradov/usb-sniffer-lite/blob/main/README.md)
+file is fairly complete. It is nice that this project requires no host
+computer software more complex than a UART terminal. It is also nice that
+this project supports both full-speed and low-speed USB. Finally, because
+the project does not need to move data off the board during capture, it
+can handle fairly fast full-speed USB transfers.
+
+This project is not without limitations. If you need to capture USB packets for a
+long time, you cannot do it. The capture buffer is limited to the memory size
+on the RP2040. You can get around this limitation somewhat by delaying the start
+of capture either manually or via an external hardware trigger signal. Also, the
+software does only minimal decode of the packets. It won't parse USB descriptors
+or data packets, for example. But for something quick and easy to use, it is good
+enough.
+
+### pico_usb_sniffer
+The [pico_usb_sniffer](https://github.com/tana/pico_usb_sniffer) project is a bit
+more involved to set up on the computer, but it is capable of longer captures because
+it sends captured packets to the computer in real-time. It stores data on the
+computer in `.pcap` file format that [Wireshark](https://www.wireshark.org/)
+can read. Since Wireshark has built-in USB packet parsers, it makes debugging
+the USB descriptors and data packets a bit easier than with usb-sniffer-lite.
+
+This project is also not without limitations. You need the `pico-sdk` installed
+to build the source, but a pre-compiled `.uf2` file is available if you want it.
+You also need to install python, the [pyserial](https://github.com/pyserial/pyserial)
+library, and the [SlipLib](https://github.com/rhjdjong/SlipLib) library on the
+capture host computer. USB capture starts when the python capture program in
+the `tools` directory starts. I had to end the capture by pressing CTRL+C.
+My USB MIDI Host test captured over 45 seconds of data to the PC, but it was
+fairly low data transfer rate. It is likely that this program would lose
+USB packets if the USB host ran as fast as possible. Finally, this sniffer
+is limited to full-speed USB only. Low-speed HID keyboards and other low-speed
+USB devices will not work.
 
 
