@@ -313,4 +313,19 @@ USB packets if the USB host ran as fast as possible. Finally, this sniffer
 is limited to full-speed USB only. Low-speed HID keyboards and other low-speed
 USB devices will not work.
 
+### Commercial USB Packet Sniffers
+If your budget allows it, I can recommend USB Packet Sniffers from TotalPhase
+and Ellysis because I have used them. I prefer the TotalPhase products because
+they run on Linux, Mac and Windows, and I found their software support was good.
+That said, unless I were working on USB high-speed hosts (or faster), or very
+high performance full-speed USB hosts, I would have trouble justifying the cost.
+The Raspberry Pi RP2040's USB host, even in full-speed mode, is just not that fast.
 
+## Conclusion
+You probably already have enough pieces in your project lab to adequately troubleshoot
+a USB host project based on the RP2040 board. Your development computer can
+display and parse the USB descriptor for any device plugged to it. You can build
+a USB packet sniffer from parts lying around the lab, and you can take it apart
+and use the parts for something else when you are done.
+
+Happy troubleshooting.
