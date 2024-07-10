@@ -235,19 +235,36 @@ endpoints to be of the Bulk type. I have encountered devices that use Interrupt
 Type endpoints. I was able to modify the Host driver to support both Bulk and Interrupt
 type endpoints.
 
-
 ### USB Packet Issues
 USB commuicates via message packets. The Host requests data and the device responds with either
 the data requested or some handshake that says it is not ready or cannot provide the data.
-Sometimes finding issues requires you to look at the USB data the Host is reading from
-the device or that the Host is sending to the Device.
+Sometimes finding issues requires you to look at the USB data the host is reading from
+the device or that the host is sending to the device.
 
-## What does a USB packet sniffer do?
-A USB packet sniffer is a passive device that listens in on the USB packets that are passed
-between the host and device. It has some means to display that traffic.
+## USB packet sniffers
+A USB packet sniffer is a passive device that captures the USB packets that are passed
+between the host and device. It has some means to store or display the captured packets, either
+in real-time or after some other limit such as number of packets captured, elapsed
+time, or using a UI to stop the capture. A USB packet sniffer if probably the most
+convenient way to debug USB traffic.
 
-Commercial embedded USB packet sniffers are very good, but most cost US $500 or more. Thanks
-to the Raspberry Pi Pico or other similar RP2040 boards and the great work from the open
-source community, you can build your own USB sniffer for much less money.
+If the USB host is in a computer running Linux, macOS or Windows, then there are software-based
+solutions that allow you display the USB packets between the computer and an attached USB
+device. However, a typical embedded USB host does not have the resources to support that.
+You need to connect an external hardware-based USB packet sniffer between your embedded
+host and your device.
+
+Commercial embedded USB packet sniffers are very good, but most cost about $500 US or more.
+A less costly solution is to use hardware/software logic analyzers to capture the USB packets,
+but the good ones are still in the $100 US neighborhood. This cost is hard to justify for
+a tool that you probably won't use very often.
+
+Thanks to the Raspberry Pi Pico or other similar RP2040 boards and the great work from the open
+source community, you can build your own USB sniffer for much less money. It doesn't even
+have to be a dedicated tool. My packet sniffer is just my USB breakout board, 3 jumper
+wires, and a Raspberry Pi Pico. When I do not need the packet sniffer, I can use all the
+pieces for something else. Here is a photo of my packet sniffer hardware:
+![usb-packet-sniffer](https://github.com/rppicomidi/pico_usb_host_troubleshooting/assets/94197396/aa77cb6c-54bd-4c75-ab03-2c05a797ecdc)
+
 
 
