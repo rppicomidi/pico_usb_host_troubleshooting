@@ -55,23 +55,22 @@ properly.
 
 ### Device USB Descriptors
 The first thing a USB Host does when you connect a USB Device to it is reset the USB Device
-and read the USB Device Descriptors from the Device. Device Descriptors are data structures
+and read the USB Device and Configuration Descriptors from the Device. Descriptors are data structures
 stored within each USB Device. The descriptors describe what the device capabilities and
 requirements are. The host reads the descriptors to determine if the host hardware and
 software support the requirements spelled out in the descriptors, and to determine what
-to expect the device is able to do based on its capabilities. This process is called
-enumeration.
+to expect the device is able to do based on its capabilities.
 
-Unlike a PC, an embedded USB host usually only supports a limited number of device types.
-For example, some basic MIDI Host projects only support USB Hubs and USB MIDI 1.0 devices.
-If you plug a device that your Host project does not support, the Host will not be able
-to plug in the device.
+Unlike a PC, Mac or other computer, an embedded USB host usually only supports a limited
+number of device types. For example, some basic MIDI Host projects only support USB Hubs
+and USB MIDI 1.0 devices. If you plug a device that your Host project does not support,
+the host will not be able to do much with the device.
 
 ### Dumping the USB Descriptors of a USB Device
-Reading USB descriptors is a something every computer with a USB port can do. Just connect
+Reading USB descriptors is something every computer with a USB port can do. Just connect
 your device to your computer, let it enumerate, and then have a look. The next section
-describes common issues with the descriptor. This section describes how to look at the
-descriptor on Linux, Mac and Windows systems.
+describes common issues that can be found using the descriptors. This section describes
+how to look at the descriptor on Linux, Mac and Windows systems.
 
 Linux computers come with a command
 ```
@@ -219,11 +218,12 @@ Descriptor header. For example:
     wTotalLength       0x0054 <== 84 bytes
 ```
 The solution is to make the descriptor buffer larger if you can, or accept that device
-won't work if you cannot.
+won't work if you cannot. Some very complex MIDI+Audio devices can have very long
+USB descriptors.
 
 #### Descriptor contains length error
 Sometimes the device has an issue where the length fields within the descriptor headers
-are wrong. This is a common problem with MIDI devices, for example. The best solution
+are wrong. This is a problem with some MIDI devices, for example. The best solution
 to this is to make sure your host driver is robust to incorrect descriptor header length
 fields.
 
@@ -232,14 +232,32 @@ The USB Class Specification for each type of USB device will specify the type of
 endpoint required to make the device work. Sometimes, device manufacturers make
 mistakes here. For example, The USB MIDI Class Specification 1.0 requires the data
 endpoints to be of the Bulk type. I have encountered devices that use Interrupt
-Type endpoints. I was able to modify the Host driver to support both Bulk and Interrupt
+Type endpoints. I was able to modify the usb_midi_host driver to support both Bulk and Interrupt
 type endpoints.
 
 ### USB Packet Issues
-USB commuicates via message packets. The Host requests data and the device responds with either
+USB commuicates via message packets. The USB Host requests data and the USB Device responds with either
 the data requested or some handshake that says it is not ready or cannot provide the data.
 Sometimes finding issues requires you to look at the USB data the host is reading from
 the device or that the host is sending to the device.
+
+#### When the device sends data with an unexpected format
+What data format each USB Device sends is often spelled out in USB Class specifications. For
+example, the USB MIDI 1.0 Class Specification specifies data should be in in 4-byte
+message units of very particular format packed into the USB Bulk transfer. I have found
+some MIDI devices will pack unused bytes of the maximum size USB Bulk transfer with 0 and
+always send maximum length packets. Other devices send a maximum length packet of complete
+nonsense data before sending normal MIDI message data. Observing this kind of behavior
+allows you to design your driver to be robust to it.
+
+#### When the device breaks the protocol
+A problem you may encounter with USB devices is the device senindg a data packet with a DATA1
+PID instead of DATA0 PID. This can happen in the case of a transmission error, and the device
+should recover from it. However, a few devices get the DATAx toggling scheme backwards. Depending
+on the capabilities of the USB Host hardware, you may not be able to fix this in your USB Host driver,
+but at least you will be able to explain why a particular device does not work. Figuring out
+these type of issues require you to be familiar with the details of the USB Specification, so
+they can be tricky.
 
 ### USB packet sniffers
 A USB packet sniffer is a passive device that captures the USB packets that are passed
