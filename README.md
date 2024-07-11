@@ -1,6 +1,11 @@
 # pico_usb_host_troubleshooting
 There can be a lot of different reasons that an embedded USB Host doesn't work with a USB device.
-The problems will either be hardware related or software related.
+The problems will either be hardware related or software related. This document summarizes some
+troubleshooting knowledge I have picked up over time, and offers very low cost suggestions
+for USB packet sniffer hardware.
+
+If you see an error in what I wrote, or if you wish to add something, please file an issue and
+we can discuss the appropriate changes to this document.
 
 ## USB Host Hardware Issues
 
@@ -227,7 +232,7 @@ Descriptor header. For example:
     bDescriptorType         2
     wTotalLength       0x0054 <== 84 bytes
 ```
-The solution is to make the descriptor buffer larger if you can, or accept that device
+The solution is to make the descriptor buffer larger if you can, or accept that the device
 won't work if you cannot. Some very complex MIDI+Audio devices can have very long
 USB descriptors.
 
@@ -256,27 +261,40 @@ What data format each USB Device sends is often spelled out in USB Class specifi
 example, the USB MIDI 1.0 Class Specification specifies data should be in in 4-byte
 message units of very particular format packed into the USB Bulk transfer. I have found
 some MIDI devices will pack unused bytes of the maximum size USB Bulk transfer with 0 and
-always send maximum length packets. Other devices send a maximum length packet of complete
-nonsense data before sending normal MIDI message data. Observing this kind of behavior
+always send maximum length packets.
+
+I have seen other USB MIDI devices that do not properly implement the
+Cable Number/Code Index Number byte, the first byte of the 4-byte packet.
+
+Still other devices send a maximum length packet of complete
+nonsense data before sending normal MIDI message data. 
+
+Observing this kind of behavior
 allows you to design your driver to be robust to it.
 
-#### When the device breaks the protocol
-A problem you may encounter with USB devices is the device senindg a data packet with a DATA1
-PID instead of DATA0 PID. This can happen in the case of a transmission error, and the device
-should recover from it. However, a few devices get the DATAx toggling scheme backwards. Depending
-on the capabilities of the USB Host hardware, you may not be able to fix this in your USB Host driver,
+#### When the device breaks the USB protocol
+Section 8 of the USB Specification spells out how each type of In, Out, Setup and Request
+transaction is supposed to happen. It also specifies when the device or host is supposed to
+send specific handshake responses. The USB Host or the USB Device might get this wrong.
+
+A problem I have encountered with a USB device's response to an IN trasaction from the host;
+the device might send a data packet with a DATA1 PID when the host expects a DATA0 PID, or vice versa.
+This can happen in the case of a transmission error, and the device
+and host should recover from it. However, a few devices get the DATAx toggling scheme backwards for IN endpoints.
+Depending on the capabilities of the USB Host hardware, you may not be able to fix this in your USB Host driver,
 but at least you will be able to explain why a particular device does not work. Figuring out
 these type of issues require you to be familiar with the details of the USB Specification, so
 they can be tricky.
 
 ### USB packet sniffers
+Finding USB packet issues requires that you can see the packets on the bus.
 A USB packet sniffer is a passive device that captures the USB packets that are passed
 between the host and device. It has some means to store or display the captured packets, either
 in real-time or after some other limit such as number of packets captured, elapsed
-time, or using a UI to stop the capture. A USB packet sniffer if probably the most
-convenient way to debug USB traffic.
+time, or using a UI to stop the capture. A USB packet sniffer is probably the most
+convenient way to debug USB packets on the bus.
 
-If the USB host is in a computer running Linux, macOS or Windows, then there are software-based
+If the USB Host is in a computer running Linux, macOS or Windows, then there are software-based
 solutions that allow you display the USB packets between the computer and an attached USB
 device. However, a typical embedded USB host does not have the resources to support that.
 You need to connect an external hardware-based USB packet sniffer between your embedded
@@ -287,7 +305,7 @@ A less costly solution is to use hardware/software logic analyzers to capture th
 but the good ones are still over $100 US. This cost is hard to justify for
 a tool that you probably won't use very often.
 
-Thanks to the Raspberry Pi Pico or other similar RP2040 boards and the great work from the open
+Thanks to the Raspberry Pi Pico or other similar RP2040 boards and to the great work from the open
 source community, you can build your own USB sniffer for much less money. It doesn't even
 have to be a dedicated tool. My packet sniffer is just my USB breakout board, 3 jumper
 wires, and a Raspberry Pi Pico. When I do not need the packet sniffer, I can use all the
@@ -296,9 +314,10 @@ pieces for something else. Here is a photo of my packet sniffer hardware:
 The harware pieces cost me well under $20 US, and I use them for projects other than
 USB packet sniffing.
 
-Other solutions include hacking into an old cable and soldering it to a connector, or
+Other solutions include hacking into an old cable and soldering it to a connector on the Pico board, or
 wiring discrete USB breakout boards to a Pico board on a standard solderless breadboard.
-See the `README.md` files from the two software projects that follow for hardware photos.
+See the `README.md` files from the two software projects that follow for the hardware photos
+those projects use.
 
 ### usb-sniffer-lite
 The [usb-sniffer-lite](https://github.com/ataradov/usb-sniffer-lite) project is the
@@ -321,6 +340,18 @@ software does only minimal decode of the packets. It won't parse USB descriptors
 or data packets, for example. But for something quick and easy to use, it is good
 enough.
 
+Here is a sample transaction printout from usb-sniffer-lite:
+```
+   995 : SOF #603
+    10 : SETUP: 0x01/0
+    13 : DATA0 (8): 80 06 00 03 00 00 00 01 
+    22 : ACK
+```
+The first column is a timestamp. The next is the name of USB Packet ID (PID). The `0x01/0` 
+after the `SETUP` PID means USB address 1, enpoint 0. Most everything else is very clear.
+If you have any questions about what you are seeing in the printout, refer to the source code.
+It is definitely clear there.
+
 ### pico_usb_sniffer
 The [pico_usb_sniffer](https://github.com/tana/pico_usb_sniffer) project is a bit
 more involved to set up on the computer, but it is capable of longer captures because
@@ -341,13 +372,24 @@ USB packets if the USB host ran as fast as possible. Finally, this sniffer
 is limited to full-speed USB only. Low-speed HID keyboards and other low-speed
 USB devices will not work.
 
+The project's [README.md](https://github.com/tana/pico_usb_sniffer/blob/main/README.md)
+file shows a sample trace in Wireshark. If clicking around the interface doesn't help
+you understand what you are looking at, please search the web for "Wireshark USB traces."
+There are videos, blog articles, etc. Filtering your capture may be helpful. [This](https://www.wireshark.org/docs/dfref/u/usb.html)
+is a list of Wireshark USB filters.
+
 ### Commercial USB Packet Sniffers
 If your budget allows it, I can recommend USB Packet Sniffers from TotalPhase
 and Ellysis because I have used them. I prefer the TotalPhase products because
 they run on Linux, Mac and Windows, and I found their software support was good.
-That said, unless I were working on USB high-speed hosts (or faster), or very
+That said, unless I were working on USB high-speed or super-speed hosts, or very
 high performance full-speed USB hosts, I would have trouble justifying the cost.
-The Raspberry Pi RP2040's USB host, even in full-speed mode, is just not that fast.
+
+I have also used DreamSoureLabs DSLogic Pro with PulseView software to capture
+USB data from the bus. The advantage is you get a very low level trace that may
+help you spot timing issues on the bus. The disadvantage is that the software and
+the hardware is cumbersome to work with. The hardware is also over $100 US last time
+I looked. I mostly regret the purchase.
 
 ## Conclusion
 You probably already have enough pieces in your project lab to adequately troubleshoot
