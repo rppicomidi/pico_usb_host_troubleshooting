@@ -1,9 +1,8 @@
 # pico_usb_host_troubleshooting
-How to use open source tools to help debug Raspberry Pi Pico USB Host Issues
-
-## What can go wrong?
 There can be a lot of different reasons that an embedded USB Host doesn't work with a USB device.
 The problems will either be hardware related or software related.
+
+## USB Host Hardware Issues
 
 ### Host Wiring and Power
 Before you connect any USB device to your embedded USB host project, be to check is that your
@@ -47,24 +46,27 @@ cable you are using and some other USB host, like a computer.
 
 That is not very helpful, I know. Sometimes, hope is plan.
 
-## Software Issues
+## USB Host Software Issues
 This section assumes you have already solved basic software issues like program compile issues,
 memory leaks, basic software logic issues, and so on. The focus is on what can go wrong
 between a USB Host and a USB Device that can cause the Host and Device to not communicate
 properly.
 
-### Device USB Descriptors
-The first thing a USB Host does when you connect a USB Device to it is reset the USB Device
-and read the USB Device and Configuration Descriptors from the Device. Descriptors are data structures
-stored within each USB Device. The descriptors describe what the device capabilities and
-requirements are. The host reads the descriptors to determine if the host hardware and
+### A USB Device's Descriptors
+One of the first things a USB Host does when you connect a USB Device to it is read the
+USB Device Descriptor and Configuration Descriptors from the device. Descriptors are data
+structures stored within each USB Device. The descriptors describe what the device capabilities and
+requirements are. The USB Host reads the descriptors to determine if the host hardware and
 software support the requirements spelled out in the descriptors, and to determine what
 to expect the device is able to do based on its capabilities.
 
 Unlike a PC, Mac or other computer, an embedded USB host usually only supports a limited
 number of device types. For example, some basic MIDI Host projects only support USB Hubs
-and USB MIDI 1.0 devices. If you plug a device that your Host project does not support,
+and USB MIDI 1.0 devices. If you plug in a device that your USB Host project does not support,
 the host will not be able to do much with the device.
+
+Many incompatibility issues between a USB Host and connected device can be predicted by
+a mismatch between the USB Device's descriptors and the USB Host's support of the device.
 
 ### Dumping the USB Descriptors of a USB Device
 Reading USB descriptors is something every computer with a USB port can do. Just connect
@@ -207,6 +209,14 @@ Windows PC users can install the [Thesycon USB Descriptor Dumper](https://www.th
 The UI for this tool is not bad.
 
 ### Common Descriptor Issues a Descriptor Dump Can Help You to Solve
+#### USB Device Class is not supported
+Embedded USB Host stacks like TinyUSB all have ways to enable support for different USB
+Device Classes. Most embedded USB Host stacks only support a limited set of classes.
+Most also provide a way to implement your own. For example, if you plug a USB Flash drive
+into a USB Host port, the host is not going to be able to do anything with it unless it
+supports the USB Mass Storage Class (MSC). Sometimes the difference
+between a USB Host working with a device or not is defining a preprocessor value to be 1.
+
 #### Descriptor too big
 Sometimes the device's configuration descriptor is too large to fit in the buffer your
 embedded project has allocated for enumeration. Look for the length in the Configuration
